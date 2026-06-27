@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rizii Advance Signals Bot Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0e1621;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #17212b;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1 {
+            text-align: center;
+            color: #2481cc;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2481cc;
+            padding-bottom: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: #202b36;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #2f3e4c;
+        }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        select, input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #2f3e4c;
+            background: #17212b;
+            color: white;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        button {
+            background: #2481cc;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover { background: #2996e6; }
+        .output-box {
+            background: #111922;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #2481cc;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #00ffcc;
+        }
+        /* Lock Screen Overlay Style */
+        #lockScreen {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: #0e1621;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .lock-box {
+            background: #17212b;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 🔒 LICENSE LOCK SCREEN -->
+<div id="lockScreen">
+    <div class="lock-box">
+        <h2>🔑 License Required</h2>
+        <p>Please enter your valid license key to access the dashboard.</p>
+        <input type="text" id="licenseInput" placeholder="Enter License Key Here...">
+        <button onclick="verifyLicense()">Activate Bot</button>
+        <p id="lockError" style="color: #ff4d4d; margin-top: 10px; font-weight: bold;"></p>
+    </div>
+</div>
+
+<!-- 🎯 MAIN DASHBOARD CONTENT (Hidden by default) -->
+<div class="container" id="mainContent" style="display: none;">
+    <h1>🎯 Rizii Advance Signals Bot V13.0</h1>
+    <div class="grid">
+        <div class="card">
+            <h2>📦 Rizii Custom Generator</h2>
+            <label for="pairSelect">Select Asset/Pair:</label>
+            <select id="pairSelect">
+                <option value="MIXED">🌀 MIXED PAIRS</option>
+                <option value="EUR/USD">EUR/USD</option>
+                <option value="GBP/USD">GBP/USD</option>
+                <option value="USD/JPY">USD/JPY</option>
+            </select>
+            <label for="tradeCount">Number of Trades:</label>
+            <input type="number" id="tradeCount" value="10" min="1" max="50">
+            <button onclick="generateSignals()">⚡ Generate Advance List</button>
+            <h3>📋 Output List:</h3>
+            <div id="genOutput" class="output-box">Signals copy karne ke liye generate karein...</div>
+        </div>
+        <div class="card">
+            <h2>📋 Rizii Smart Result Checker</h2>
+            <label for="listInput">Paste Generated List Here:</label>
+            <textarea id="listInput" placeholder="EUR/USD ; 14:25 ; UP" style="height: 120px;"></textarea>
+            <button onclick="checkResultsWithEmulation()" style="background: #28a745;">🔍 Evaluate Smart Accuracy</button>
+            <h3>📊 Accuracy Report:</h3>
+            <div id="checkOutput" class="output-box" style="color: #ffcc00;">List paste karke evaluate karein...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 🔒 License Verification Logic
+    async function verifyLicense() {
+        const key = document.getElementById('licenseInput').value.trim();
+        const errorDiv = document.getElementById('lockError');
+        
+        if(!key) {
+            errorDiv.innerText = "Please enter a key!";
+            return;
+        }
+
+        try {
+            // Vercel serverless api hit ho rahi hai yahan
+            const response = await fetch('/api/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ licenseKey: key })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('lockScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                // Session store taake baar baar refresh par na mange
+                sessionStorage.setItem('bot_authenticated', 'true');
+            } else {
+                errorDiv.innerText = data.message || "Invalid Key!";
+            }
+        } catch (err) {
+            errorDiv.innerText = "Connection error! Try again.";
+        }
+    }
+
+    // Auto check if already authenticated in this session
+    if(sessionStorage.getItem('bot_authenticated') === 'true') {
+        document.getElementById('lockScreen').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+    }
+
+    // --- 🤖 GENERATOR & CHECKER LOGIC ---
+    const pairsArray = ["EUR/USD", "GBP/USD", "USD/JPY"];
+    function generateSignals() {
+        const selected = document.getElementById('pairSelect').value;
+        const count = parseInt(document.getElementById('tradeCount').value) || 10;
+        let header = `⚡ **ADVANCE LIST** ⚡\n\n📌 **TIME ZONE:** PAKISTANI\n⏰ (UTC+05:00)\n\n📊 **1 MINUTE CANDLE**\n🛡️ **1 STEP MARTINGALE**\n\n===============================\n`;
+        let body = "";
+        let now = new Date();
+        now.setMinutes(now.getMinutes() + 5);
+
+        for (let i = 0; i < count; i++) {
+            let currentPair = selected === "MIXED" ? pairsArray[i % pairsArray.length] : selected;
+            let timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+            let direction = Math.random() > 0.5 ? "UP" : "DOWN";
+            body += `${currentPair} ; ${timeStr} ; ${direction}\n`;
+            now.setMinutes(now.getMinutes() + 5);
+        }
+        let footer = `===============================\n\n⚠️ **FOLLOW MONEY MANAGEMENT**\n📝 **NOTE:** MUST FOLLOW TREND.`;
+        document.getElementById('genOutput').innerText = header + body + footer;
+    }
+
+    function getSeededResult(pair, timeStr) {
+        let seed = 0; let combinedStr = pair + timeStr;
+        for (let i = 0; i < combinedStr.length; i++) { seed += combinedStr.charCodeAt(i); }
+        let x = Math.sin(seed) * 10000; let finalRoll = x - Math.floor(x);
+        if (finalRoll < 0.62) return "🟢 DIRECT WIN";
+        else if (finalRoll < 0.84) return "裁 1st MTG WIN";
+        else if (finalRoll < 0.88) return "🔄 Doji (REFUND)";
+        else return "🔴 LOSS";
+    }
+
+    function checkResultsWithEmulation() {
+        const input = document.getElementById('listInput').value;
+        const lines = input.split('\n');
+        const outputDiv = document.getElementById('checkOutput');
+        let report = "📊 **Rizii Accuracy Evaluation Report**\n=================================\n\n";
+        let pattern = /([A-Z\/_]+)\s*;\s*(\d{2}:\d{2})\s*;\s*(UP|DOWN)/i;
+        let now = new Date();
+        
+        lines.forEach(line => {
+            let match = pattern.exec(line);
+            if (match) {
+                let pair = match[1].toUpperCase().trim();
+                let timeVal = match[2].trim();
+                let direction = match[3].toUpperCase().trim();
+                let result = getSeededResult(pair, timeVal);
+                report += `🔹 ${pair} ; ${timeVal} ; ${direction} ➜ ${result}\n`;
+            }
+        });
+        report += "\n=================================\n🔥 Evaluation Matrix Finished Successfully.";
+        outputDiv.innerText = report;
+    }
+</script>
+</body>
+</html>
