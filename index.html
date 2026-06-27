@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rizii Advance Signals Bot Dashboard</title>
+    <title>RQBT Advance Signals Bot Dashboard</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -38,6 +38,7 @@
             padding: 20px;
             border-radius: 8px;
             border: 1px solid #2f3e4c;
+            position: relative;
         }
         label { display: block; margin: 10px 0 5px; font-weight: bold; }
         select, input, textarea, button {
@@ -58,6 +59,13 @@
             border: none;
         }
         button:hover { background: #2996e6; }
+        .copy-btn {
+            background: #e67e22;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            padding: 8px;
+        }
+        .copy-btn:hover { background: #d35400; }
         .output-box {
             background: #111922;
             padding: 15px;
@@ -65,11 +73,10 @@
             border: 1px solid #2481cc;
             white-space: pre-wrap;
             font-family: monospace;
-            max-height: 300px;
+            max-height: 450px;
             overflow-y: auto;
             color: #00ffcc;
         }
-        /* Lock Screen Overlay Style */
         #lockScreen {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
@@ -88,9 +95,26 @@
             max-width: 400px;
             width: 100%;
         }
+        /* Custom Toast Notification Style */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2ecc71;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 10000;
+        }
     </style>
 </head>
 <body>
+
+<!-- 📝 TOAST ALERT FOR COPY -->
+<div id="toastAlert" class="toast">📋 List copied to clipboard!</div>
 
 <!-- 🔒 LICENSE LOCK SCREEN -->
 <div id="lockScreen">
@@ -103,29 +127,37 @@
     </div>
 </div>
 
-<!-- 🎯 MAIN DASHBOARD CONTENT (Hidden by default) -->
+<!-- 🎯 MAIN DASHBOARD CONTENT -->
 <div class="container" id="mainContent" style="display: none;">
-    <h1>🎯 Rizii Advance Signals Bot V13.0</h1>
+    <h1>🎯 RQBT Signals Engine</h1>
     <div class="grid">
         <div class="card">
-            <h2>📦 Rizii Custom Generator</h2>
+            <h2>📦 RQBT Custom Generator</h2>
             <label for="pairSelect">Select Asset/Pair:</label>
             <select id="pairSelect">
-                <option value="MIXED">🌀 MIXED PAIRS</option>
-                <option value="EUR/USD">EUR/USD</option>
-                <option value="GBP/USD">GBP/USD</option>
-                <option value="USD/JPY">USD/JPY</option>
+                <option value="MIXED">🌀 MIXED LIVE PAIRS</option>
+                <option value="EURUSD">EURUSD</option>
+                <option value="GBPUSD">GBPUSD</option>
+                <option value="USDJPY">USDJPY</option>
+                <option value="USDCHF">USDCHF</option>
+                <option value="CHFJPY">CHFJPY</option>
+                <option value="EURGBP">EURGBP</option>
+                <option value="AUDUSD">AUDUSD</option>
+                <option value="USDCAD">USDCAD</option>
             </select>
             <label for="tradeCount">Number of Trades:</label>
             <input type="number" id="tradeCount" value="10" min="1" max="50">
-            <button onclick="generateSignals()">⚡ Generate Advance List</button>
-            <h3>📋 Output List:</h3>
-            <div id="genOutput" class="output-box">Signals copy karne ke liye generate karein...</div>
+            <button onclick="generateSignals()">⚡ Generate RQBT Template List</button>
+            
+            <div style="margin-top: 15px;">
+                <button onclick="copyToClipboard()" class="copy-btn">📋 Copy Full List</button>
+                <div id="genOutput" class="output-box">Signals copy karne ke liye generate karein...</div>
+            </div>
         </div>
         <div class="card">
-            <h2>📋 Rizii Smart Result Checker</h2>
+            <h2>📋 RQBT Smart Result Checker</h2>
             <label for="listInput">Paste Generated List Here:</label>
-            <textarea id="listInput" placeholder="EUR/USD ; 14:25 ; UP" style="height: 120px;"></textarea>
+            <textarea id="listInput" placeholder="09:00 EURUSD ➪ PUT" style="height: 120px;"></textarea>
             <button onclick="checkResultsWithEmulation()" style="background: #28a745;">🔍 Evaluate Smart Accuracy</button>
             <h3>📊 Accuracy Report:</h3>
             <div id="checkOutput" class="output-box" style="color: #ffcc00;">List paste karke evaluate karein...</div>
@@ -134,7 +166,6 @@
 </div>
 
 <script>
-    // 🔒 License Verification Logic
     async function verifyLicense() {
         const key = document.getElementById('licenseInput').value.trim();
         const errorDiv = document.getElementById('lockError');
@@ -145,7 +176,6 @@
         }
 
         try {
-            // Vercel serverless api hit ho rahi hai yahan
             const response = await fetch('/api/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -157,7 +187,6 @@
             if (data.success) {
                 document.getElementById('lockScreen').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
-                // Session store taake baar baar refresh par na mange
                 sessionStorage.setItem('bot_authenticated', 'true');
             } else {
                 errorDiv.innerText = data.message || "Invalid Key!";
@@ -167,31 +196,85 @@
         }
     }
 
-    // Auto check if already authenticated in this session
     if(sessionStorage.getItem('bot_authenticated') === 'true') {
         document.getElementById('lockScreen').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';
     }
 
-    // --- 🤖 GENERATOR & CHECKER LOGIC ---
-    const pairsArray = ["EUR/USD", "GBP/USD", "USD/JPY"];
+    // --- 🤖 GENERATOR & EXACT RQBT FORMATTING LOGIC ---
+    const pairsArray = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "CHFJPY", "EURGBP", "AUDUSD", "USDCAD"];
+    let currentGeneratedList = ""; // Store for easy copy
+
     function generateSignals() {
         const selected = document.getElementById('pairSelect').value;
         const count = parseInt(document.getElementById('tradeCount').value) || 10;
-        let header = `⚡ **ADVANCE LIST** ⚡\n\n📌 **TIME ZONE:** PAKISTANI\n⏰ (UTC+05:00)\n\n📊 **1 MINUTE CANDLE**\n🛡️ **1 STEP MARTINGALE**\n\n===============================\n`;
-        let body = "";
+        
         let now = new Date();
+        let dd = String(now.getDate()).padStart(2, '0');
+        let mm = String(now.getMonth() + 1).padStart(2, '0');
+        let yyyy = now.getFullYear();
+        let formattedDate = `${dd}.${mm}.${yyyy}`;
+
+        let header = `🎇${formattedDate}\n\n📈 RQBT Traders\n\n🏦 Broker: Quotex\n⏰UTC +5:00(Pakistan)🇵🇰\n\n➡️ 1 STEP MTG\n⏱️ 1M\n\n`;
+        let body = "";
+        
         now.setMinutes(now.getMinutes() + 5);
 
         for (let i = 0; i < count; i++) {
             let currentPair = selected === "MIXED" ? pairsArray[i % pairsArray.length] : selected;
             let timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
-            let direction = Math.random() > 0.5 ? "UP" : "DOWN";
-            body += `${currentPair} ; ${timeStr} ; ${direction}\n`;
+            let direction = Math.random() > 0.48 ? "CALL" : "PUT";
+            
+            body += `${timeStr} ${currentPair} ➪ ${direction}\n`;
             now.setMinutes(now.getMinutes() + 5);
         }
-        let footer = `===============================\n\n⚠️ **FOLLOW MONEY MANAGEMENT**\n📝 **NOTE:** MUST FOLLOW TREND.`;
-        document.getElementById('genOutput').innerText = header + body + footer;
+
+        let footer = `\n🚨 RQBT Software Rules for Better Accuracy 🚨\n\n` +
+                     `📌 RULE NO 1: ❌ Avoid trading after a Doji candle\n` +
+                     `📌 RULE NO 2: ❌ Avoid trading after a big candle\n` +
+                     `📌 RULE NO 3: 📉 Avoid trading against the trend\n` +
+                     `📌 RULE NO 4: 🛡️ Always use a safety margin\n` +
+                     `📌 RULE NO 5: ⚠️ Avoid big gap up/down markets\n` +
+                     `📌 RULE NO 6: 💰 Avoid trades if payout is below 80%\n` +
+                     `📌 RULE NO 7: 🎯 If TP (Take Profit) is hit → STOP trading\n\n` +
+                     `📝 Important Notes:\n` +
+                     `✔️ Risk management is mandatory 📊\n` +
+                     `✔️ No rule = No trade 🚫\n` +
+                     `✔️ Always follow proper money management 💸\n\n` +
+                     `Build by RiZii Advance Signals`;
+
+        currentGeneratedList = header + body + footer;
+        document.getElementById('genOutput').innerText = currentGeneratedList;
+    }
+
+    // 📋 Dedicated Copy Function
+    function copyToClipboard() {
+        if (!currentGeneratedList || currentGeneratedList.startsWith("Signals copy karne")) {
+            alert("Pehle signals generate karein!");
+            return;
+        }
+        
+        navigator.clipboard.writeText(currentGeneratedList).then(() => {
+            const toast = document.getElementById('toastAlert');
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2500);
+        }).catch(err => {
+            // Fallback for older browsers
+            const el = document.createElement('textarea');
+            el.value = currentGeneratedList;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            const toast = document.getElementById('toastAlert');
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2500);
+        });
     }
 
     function getSeededResult(pair, timeStr) {
@@ -199,7 +282,7 @@
         for (let i = 0; i < combinedStr.length; i++) { seed += combinedStr.charCodeAt(i); }
         let x = Math.sin(seed) * 10000; let finalRoll = x - Math.floor(x);
         if (finalRoll < 0.62) return "🟢 DIRECT WIN";
-        else if (finalRoll < 0.84) return "裁 1st MTG WIN";
+        else if (finalRoll < 0.84) return "🍏 1st MTG WIN";
         else if (finalRoll < 0.88) return "🔄 Doji (REFUND)";
         else return "🔴 LOSS";
     }
@@ -208,18 +291,18 @@
         const input = document.getElementById('listInput').value;
         const lines = input.split('\n');
         const outputDiv = document.getElementById('checkOutput');
-        let report = "📊 **Rizii Accuracy Evaluation Report**\n=================================\n\n";
-        let pattern = /([A-Z\/_]+)\s*;\s*(\d{2}:\d{2})\s*;\s*(UP|DOWN)/i;
-        let now = new Date();
+        let report = "📊 **RQBT Accuracy Evaluation Report**\n=================================\n\n";
+        
+        let pattern = /(\d{2}:\d{2})\s*([A-Z\/_]+)\s*➪\s*(CALL|PUT)/i;
         
         lines.forEach(line => {
             let match = pattern.exec(line);
             if (match) {
-                let pair = match[1].toUpperCase().trim();
-                let timeVal = match[2].trim();
+                let timeVal = match[1].trim();
+                let pair = match[2].toUpperCase().trim();
                 let direction = match[3].toUpperCase().trim();
                 let result = getSeededResult(pair, timeVal);
-                report += `🔹 ${pair} ; ${timeVal} ; ${direction} ➜ ${result}\n`;
+                report += `🔹 ${timeVal} ${pair} ➪ ${direction} ➜ ${result}\n`;
             }
         });
         report += "\n=================================\n🔥 Evaluation Matrix Finished Successfully.";
